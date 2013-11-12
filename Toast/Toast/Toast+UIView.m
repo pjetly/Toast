@@ -47,6 +47,11 @@ static const CGFloat CSToastActivityHeight      = 100.0;
 static const NSString * CSToastActivityDefaultPosition = @"center";
 static const NSString * CSToastActivityViewKey  = @"CSToastActivityViewKey";
 
+// gesture
+
+static UIGestureRecognizer *tap;
+static UIView *toastView;
+
 
 @interface UIView (ToastPrivate)
 
@@ -80,9 +85,20 @@ static const NSString * CSToastActivityViewKey  = @"CSToastActivityViewKey";
 }
 
 - (void)makeToast:(NSString *)message duration:(CGFloat)interval  position:(id)position title:(NSString *)title image:(UIImage *)image {
-    UIView *toast = [self viewForMessage:message title:title image:image];
+    UIView *toast = [self viewForMessage:message title:title image:nil];
     [self showToast:toast duration:interval position:position];  
 }
+
+- (void)makeToastWithTap:(NSString *)message position:(id)position title:(NSString *)title{
+    toastView = [self viewForMessage:message title:title image:nil];
+    [self toastWithTap:toastView position:position];
+}
+
+- (void)makeToastWithTap:(NSString *)message position:(id)position title:(NSString *)title image:(UIImage *)image {
+    toastView = [self viewForMessage:message title:title image:image];
+    [self toastWithTap:toastView position:position];
+}
+
 
 - (void)showToast:(UIView *)toast {
     [self showToast:toast duration:CSToastDefaultDuration position:CSToastDefaultPosition];
@@ -108,6 +124,37 @@ static const NSString * CSToastActivityViewKey  = @"CSToastActivityViewKey";
                                               [toast removeFromSuperview];
                                           }];
                      }];
+}
+
+- (void)toastWithTap:(UIView *)toast position:(id)point {
+    toast.center = [self centerPointForPosition:point withToast:toast];
+    toast.alpha = 0.0;
+
+    tap = [[UITapGestureRecognizer alloc] initWithTarget:self action:@selector(handleSingleTap:)];
+    
+    [self addSubview:toast];
+
+    [UIView animateWithDuration:CSToastFadeDuration
+                          delay:0.0
+                        options:UIViewAnimationOptionCurveEaseOut | UIViewAnimationOptionAllowUserInteraction
+                     animations:^{
+                         toast.alpha = 1.0;
+                         [toast addGestureRecognizer:tap];
+
+                     } completion: nil
+     
+//     ^(BOOL finished) {
+//                         [UIView animateWithDuration:CSToastFadeDuration
+//                                               delay:1000.0
+//                                             options:UIViewAnimationOptionCurveEaseIn | UIViewAnimationOptionAllowUserInteraction
+//                                          animations:^{
+//                                              toast.alpha = 0.0;
+//                                          } completion:^(BOOL finished) {
+//                                              [toast removeFromSuperview];
+//                                          }];
+//                     }
+//     
+     ];
 }
 
 #pragma mark - Toast Activity Methods
@@ -201,6 +248,7 @@ static const NSString * CSToastActivityViewKey  = @"CSToastActivityViewKey";
     UIView *wrapperView = [[[UIView alloc] init] autorelease];
     wrapperView.autoresizingMask = (UIViewAutoresizingFlexibleLeftMargin | UIViewAutoresizingFlexibleRightMargin | UIViewAutoresizingFlexibleTopMargin | UIViewAutoresizingFlexibleBottomMargin);
     wrapperView.layer.cornerRadius = CSToastCornerRadius;
+    wrapperView.layer.zPosition = MAXFLOAT - 1;
     
     if (CSToastDisplayShadow) {
         wrapperView.layer.shadowColor = [UIColor blackColor].CGColor;
@@ -297,19 +345,35 @@ static const NSString * CSToastActivityViewKey  = @"CSToastActivityViewKey";
     
     if(titleLabel != nil) {
         titleLabel.frame = CGRectMake(titleLeft, titleTop, titleWidth, titleHeight);
+        titleLabel.userInteractionEnabled = YES;
         [wrapperView addSubview:titleLabel];
     }
     
     if(messageLabel != nil) {
         messageLabel.frame = CGRectMake(messageLeft, messageTop, messageWidth, messageHeight);
+        messageLabel.userInteractionEnabled = YES;
         [wrapperView addSubview:messageLabel];
     }
     
     if(imageView != nil) {
+        imageView.userInteractionEnabled = YES;
         [wrapperView addSubview:imageView];
     }
         
     return wrapperView;
 }
 
+-(void)handleSingleTap:(UITapGestureRecognizer *)sender{
+     if (toastView != nil) {
+         [UIView animateWithDuration:CSToastFadeDuration
+                               delay:0.0
+                             options:(UIViewAnimationOptionCurveEaseIn | UIViewAnimationOptionBeginFromCurrentState)
+                          animations:^{
+                              toastView.alpha = 0.0;
+                          } completion:^(BOOL finished) {
+                              [toastView removeFromSuperview];
+                              toastView = nil;
+                          }];
+     }
+}
 @end
