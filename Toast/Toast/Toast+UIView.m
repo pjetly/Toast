@@ -46,6 +46,8 @@ static const CGFloat CSToastActivityWidth       = 100.0;
 static const CGFloat CSToastActivityHeight      = 100.0;
 static const NSString * CSToastActivityDefaultPosition = @"center";
 static const NSString * CSToastActivityViewKey  = @"CSToastActivityViewKey";
+static const NSString * CSToastWithTapViewKey  = @"CSToastWithTapViewKey";
+
 
 // gesture
 
@@ -127,6 +129,12 @@ static UIView *toastView;
 }
 
 - (void)toastWithTap:(UIView *)toast position:(id)point {
+    UIView *existingToastWithTapView = (UIView *)objc_getAssociatedObject(self, &CSToastWithTapViewKey);
+    if (existingToastWithTapView != nil) return;
+    
+    // associate ourselves with the toast view
+    objc_setAssociatedObject (self, &CSToastWithTapViewKey, toast, OBJC_ASSOCIATION_RETAIN_NONATOMIC);
+    
     toast.center = [self centerPointForPosition:point withToast:toast];
     toast.alpha = 0.0;
 
@@ -142,18 +150,6 @@ static UIView *toastView;
                          [toast addGestureRecognizer:tap];
 
                      } completion: nil
-     
-//     ^(BOOL finished) {
-//                         [UIView animateWithDuration:CSToastFadeDuration
-//                                               delay:1000.0
-//                                             options:UIViewAnimationOptionCurveEaseIn | UIViewAnimationOptionAllowUserInteraction
-//                                          animations:^{
-//                                              toast.alpha = 0.0;
-//                                          } completion:^(BOOL finished) {
-//                                              [toast removeFromSuperview];
-//                                          }];
-//                     }
-//     
      ];
 }
 
@@ -364,6 +360,9 @@ static UIView *toastView;
 }
 
 -(void)handleSingleTap:(UITapGestureRecognizer *)sender{
+    
+    UIView *toastView = (UIView *)objc_getAssociatedObject(self, &CSToastWithTapViewKey);
+    
      if (toastView != nil) {
          [UIView animateWithDuration:CSToastFadeDuration
                                delay:0.0
@@ -372,7 +371,7 @@ static UIView *toastView;
                               toastView.alpha = 0.0;
                           } completion:^(BOOL finished) {
                               [toastView removeFromSuperview];
-                              toastView = nil;
+                              objc_setAssociatedObject (self, &CSToastWithTapViewKey, nil, OBJC_ASSOCIATION_RETAIN_NONATOMIC);
                           }];
      }
 }
